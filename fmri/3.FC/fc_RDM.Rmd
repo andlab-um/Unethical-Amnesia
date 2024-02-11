@@ -1,0 +1,233 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Initialize workspace
+
+```{r}
+rm(list=ls())
+path="/Users/orlacamus/Desktop/projects/unethical_amnesia/analysisCode/"
+# Install required packages if necessary:
+want = c("data.table", "lme4", "Matrix","ez","ggplot2","dplyr",'ggpubr','patchwork','tidyr',' reticulate','tidyverse','readxl')
+have = want %in% rownames(installed.packages())
+if ( any(!have) ) { install.packages( want[!have] ) }
+# Now load them all
+lapply(want, require, character.only = TRUE)
+library(reticulate)
+library(svglite)
+library(R.matlab)
+```
+
+```{r, setup, include=FALSE}
+knitr::opts_knit$set(root.dir = path)
+```
+
+```{r}
+subL = c(102,103,105,107,108,110,111,112,113,114,115,116,117,118,119,120,121,122,123,125,127,128,129,130,131,132)
+
+
+dt4 <- readMat("6.FC/RRC_02/AllSubjects/lie_Session4/ROI.mat")
+coord=read_csv('subject-level_coords.csv')
+coord=coord[coord$subjno %in% subL,]
+
+
+
+
+dq <- fread("/users/orlacamus/desktop/projects/dishonesty/fMRI/dishonesty_behav/RD_questionnaire_summary.csv",fill=TRUE)
+ques = dq[dq$subno %in% subL,]
+
+
+ROIs=c(1,2,3,4,5,6,7,8,9,10,11,12,13) 
+ROIsname=c("BA6-SMA",'BA13-insula',"BA23-PCC","lTPJ","OFC",'BA10-FPC',"BA34-hip","BA28-hip1",'BA8-preSMA','BA9-dlPFC','BA24-dACC','BA24-sgACC','BA46-vlPFC')
+```
+
+
+
+
+
+
+```{r}
+for (i in c(10)){# FPC
+  
+  fc_lie4=data.frame(dt4[["ROI"]][[16*i-14]])
+ 
+  fc=fc_lie4
+  for (j in c(1)){ #SMA
+    temp_SMA=data.frame(subL)
+    temp_SMA$value=fc[,j]
+    temp_SMA$condition=ROIsname[j]
+  }
+  for (j in c(2)){ #insula
+    temp_insula=data.frame(subL)
+    temp_insula$value=fc[,j]
+    temp_insula$condition=ROIsname[j]
+  }
+  
+  for (j in c(3)){ #PCC
+    temp_PCC=data.frame(subL)
+    temp_PCC$value=fc[,j]
+    temp_PCC$condition=ROIsname[j]
+  }
+  for (j in c(4)){ #lTPJ
+    temp_lTPJ=data.frame(subL)
+    temp_lTPJ$value=fc[,j]
+    temp_lTPJ$condition=ROIsname[j]
+  }
+  
+  for (j in c(5)){ #OFC
+    temp_OFC=data.frame(subL)
+    temp_OFC$value=fc[,j]
+    temp_OFC$condition=ROIsname[j]
+  }
+  for (j in c(6)){ #OFC
+    temp_FPC=data.frame(subL)
+    temp_FPC$value=fc[,j]
+    temp_FPC$condition=ROIsname[j]
+  }
+  for (j in c(7)){ #OFC
+    temp_hip=data.frame(subL)
+    temp_hip$value=fc[,j]
+    temp_hip$condition=ROIsname[j]
+  }
+  
+  for (j in c(8)){ #OFC
+    temp_hip1=data.frame(subL)
+    temp_hip1$value=fc[,j]
+    temp_hip1$condition=ROIsname[j]
+  }
+  for (j in c(9)){ #OFC
+    temp_MTG=data.frame(subL)
+    temp_MTG$value=fc[,j]
+    temp_MTG$condition=ROIsname[j]
+  }
+  
+  
+}
+temp=data.frame(subL)
+
+temp$SMA=temp_SMA$value
+temp$OFC=temp_OFC$value
+temp$lTPJ=temp_lTPJ$value
+temp$PCC=temp_PCC$value
+temp$insula=temp_insula$value
+temp$FPC=temp_FPC$value
+temp$hip1=temp_hip1$value
+temp$MTG=temp_MTG$value
+temp$hip=temp_hip$value
+```
+
+
+```{r}
+cor.test(temp$SMA,itemchange1_agg$meta)
+cor.test(temp$SMA,itemchange2_agg$meta)
+cor.test(temp$insula,itemchange1_agg$meta)
+cor.test(temp$insula,itemchange2_agg$meta)
+cor.test(temp$PCC,itemchange1_agg$meta)
+cor.test(temp$PCC,itemchange2_agg$meta)
+cor.test(temp$lTPJ,itemchange1_agg$meta)
+cor.test(temp$lTPJ,itemchange2_agg$meta)
+cor.test(temp$OFC,itemchange1_agg$meta)
+cor.test(temp$OFC,itemchange2_agg$meta)
+cor.test(temp$FPC,itemchange1_agg$meta)
+cor.test(temp$FPC,itemchange2_agg$meta)
+cor.test(temp$hip,itemchange1_agg$meta)
+cor.test(temp$hip,itemchange2_agg$meta)
+
+
+fit=lm(itemchange1_agg$meta~temp$SMA+temp$lTPJ+temp$PCC+temp$OFC+temp$hip+temp$insula)
+summary(fit)
+
+fit=lm(itemchange2_agg$meta~temp$SMA+temp$lTPJ+temp$PCC+temp$OFC+temp$hip+temp$insula)
+summary(fit)
+
+fit=lm(coord1$all~temp$SMA+temp$lTPJ+temp$PCC+temp$OFC+temp$insula+temp$hip)
+summary(fit)
+fit=lm(coord2$all~temp$SMA+temp$lTPJ+temp$PCC+temp$FPC+temp$insula+temp$hip)
+summary(fit)
+fit=lm(temp$hip~itemchange1_agg$meta+itemchange1_agg$RT+itemchange1_agg$MAD+itemchange1_agg$AUC++itemchange1_agg$AD)
+summary(fit)
+
+```
+
+
+
+```{r}
+coord1=read_csv('7.PCA/subject-level_coords_new.csv')
+
+coord2=read_csv('7.PCA/subject-level_coords2_new.csv')
+coord1$all=sqrt(coord1$`1`^2+coord1$`2`^2+coord1$`3`^2)
+coord2$all=sqrt(coord1$`1`^2+coord1$`2`^2+coord1$`3`^2)
+
+```
+
+
+```{python}
+from scipy.spatial.distance import pdist
+import pandas as pd
+dist_coord=pdist(r.coord1.loc[:,['1','2','3']],metric='euclidean')
+dist_coord=pdist(r.coord2.loc[:,['1','2','3']],metric='euclidean')
+dist_SMA=pdist(r.temp.loc[:,['SMA']],metric='euclidean')
+dist_OFC=pdist(r.temp.loc[:,['OFC']],metric='euclidean')
+dist_lTPJ=pdist(r.temp.loc[:,['lTPJ']],metric='euclidean')
+dist_PCC=pdist(r.temp.loc[:,['PCC']],metric='euclidean')
+dist_insula=pdist(r.temp.loc[:,['insula']],metric='euclidean')
+dist_FPC=pdist(r.temp.loc[:,['FPC']],metric='euclidean')
+dist_hip1=pdist(r.temp.loc[:,['hip1']],metric='euclidean')
+dist_MTG=pdist(r.temp.loc[:,['MTG']],metric='euclidean')
+dist_hip=pdist(r.temp.loc[:,['hip']],metric='euclidean')
+
+```
+
+
+
+```{r}
+fit=lm(py$dist_coord~py$dist_SMA+py$dist_OFC+py$dist_lTPJ+py$dist_PCC+py$dist_insula)
+
+a=summary(fit)
+c=confint(fit)
+
+fit=data.frame(coef(a))
+fit=fit[2:6,c(1,2,4)]
+colnames(fit)=c('est','se','pval')
+
+#rownames(fit_prACC)=c('con','mon','SVO','IRI')
+fit$name=c("DLPFC-SMA","DLPFC-OFC","DLPFC-lTPJ",'DLPFC-PCC','DLPFC-insula')
+fit$mark_sig=c('black','black','black','black','black')
+fit$low=c[2:6,'2.5 %']
+fit$high=c[2:6,'97.5 %']
+#c("BA6-SMA","BA9-dlPFC","BA23-PCC","BA35-hip2","lTPJ")
+write.csv(fit,'6.FC/fc_results1.csv')
+write.csv(fit,'6.FC/fc_results2.csv')
+
+fit=read.csv('6.FC/fc_results1.csv')
+order_name=factor(fit$name,levels = c("DLPFC-SMA","DLPFC-OFC","DLPFC-lTPJ",'DLPFC-PCC','DLPFC-insula'))
+group_name=factor(fit$study,levels = c('study2','study1'))
+f=ggplot(data=fit,aes(x=est, y=order_name, color=mark_sig,group=group_name)) +
+gg +
+# Add background shading to help group betas together
+#geom_rect(xmin=-3, xmax=3, 
+#          ymin=2.5, ymax=5,
+#          fill="#f0f0f0", color = NA) +
+# Reference line at null effect 0
+geom_vline(xintercept = 0, linetype = "dotted", size = 0.2) +
+# Add beta estimates, CIs, and p-values
+geom_errorbarh(aes(xmin=est-se, xmax=est+se),
+               size = 2, height = 0.5,
+               position = position_dodge(0.8)) +
+geom_point(position = position_dodge(0.8),size=3.5) +
+#geom_text(aes(label=paste0('p=',pval), x=(low + high)/2),
+#          position = position_nudge(y = -0.2),
+#          size = 2.5, color = "black") +
+# Make pretty
+xlab("Beta Estimate (a.u.)") +
+#scale_y_discrete(name = NULL, limits=c("SVO","IRI","mon",'con'),labels=c('SVO','IRI','reward','consistency')) +
+scale_color_manual(values = c("black",'#00a6fb'),guide=NULL)+
+theme(axis.text.y = element_text(size=20),
+      axis.text.x = element_text(size=20),
+      axis.title.x = element_text(size=20))
+f
+ggsave(file=paste0('/Users/orlacamus/Downloads/dlPFC-regres.png'), plot=f, width=7, height=10)
+```
+
