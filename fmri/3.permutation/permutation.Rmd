@@ -1,0 +1,122 @@
+```{r}
+rm(list=ls())
+# Install required packages if necessary:
+want = c("data.table", "lme4", "Matrix","ez","ggplot2","dplyr",'ggpubr','patchwork','tidyr',' reticulate','tidyverse','readxl')
+have = want %in% rownames(installed.packages())
+if ( any(!have) ) { install.packages( want[!have] ) }
+# Now load them all
+lapply(want, require, character.only = TRUE)
+library(reticulate)
+library(svglite)
+```
+
+```{r, setup, include=FALSE}
+path="/Users/orlacamus/Desktop/projects/unethical_amnesia/analysisCode"
+knitr::opts_knit$set(root.dir = path)
+```
+
+
+```{r}
+set.seed(2023)
+n_permute=9999
+rhos=c()
+all_rhos=c()
+py_run_string("from scipy.stats import spearmanr")
+py_run_string("from scipy.spatial.distance import squareform")
+py_run_string("from scipy.spatial.distance import pdist")
+py_run_string("import numpy as np")
+all=read_csv("/Users/orlacamus/Desktop/projects/unethical_amnesia/analysisCode/6.geometry/parameterized-results_seuc.csv")
+all1=all[-1,]
+all=all[-1,]
+coord=read_csv('/Users/orlacamus/Desktop/projects/unethical_amnesia/analysisCode/7.PCA/subject-level_coords_new.csv')
+coord=data.frame(coord)
+py_run_string('dist_mem=pdist(r.coord.loc[:,["X1","X2","X3"]],metric="euclidean")')
+
+
+
+py$df=py$dist_mem
+py_run_string('sq_mem=squareform(dist_mem)')
+
+ROIs=c("BA9-dlPFC","BA6-SMA","BA35-hip2","lTPJ","BA23-PCC")
+
+ROIs=c('ANG','BA6-SMA','BA8-preSMA','BA9-dlPFC','BA13-insula','BA24-dACC',
+       'BA28-hip1','BA34-hip','BA35-hip2','lDLPFC','rDLPFC','ventral_striatum',
+       'putamen','rTPJ','lTPJ','BA21-MTG','BA23-PCC','BA32-prACC','BA47-vlPFC','OFC','mPFC',
+       'NAcc','BA25-sgACC','ACC','BA29-RSC1','BA30-RSC2','BA33-rACC','MCC','amyg','amygL','amygR')
+ROIs=c("BA9-dlPFC","OFC","lTPJ","BA24-dACC","BA28-hip1")
+
+ROIs=c("BA6-SMA",'OFC',"lTPJ","BA23-PCC","BA13-insula")
+ROIs=c("BA9-dlPFC",'BA34-hip','BA24-dACC')
+
+for (i in c(1:length(ROIs))){
+  temp=all[all[,'ROI']==ROIs[i],]
+  
+  for (var in c(c('lie'))){
+    rhos=c()
+    compr=data.frame(temp[[var]])
+
+    #compr=data.frame(temp[,c('lie','hon')])
+    py_run_string('dist_compr=pdist(r.compr,metric="euclidean")')
+    #py_run_string('dist_compr=pdist(r.compr.loc[:,["lie","hon"]],metric="seuclidean")')
+    corr=cor.test(py$dist_compr,py$dist_mem,method = 'spearman')$estimate
+    rhos=append(rhos,corr)
+    for (p in c(1:n_permute)){
+      py_run_string('rho=spearmanr(np.random.permutation(dist_compr),dist_mem)[0]')
+      rhos=append(rhos,py$rho)
+    }
+    
+    if (corr>0){
+      perm_p=mean(rhos>=corr)
+    }
+    if (corr<0){
+      perm_p=mean(rhos<=corr)
+    }
+    if ((corr>0)){
+      print(ROIs[i])
+      print(var)
+      print(corr)
+      print(perm_p)
+      rhos=append(rhos,perm_p)
+      all_rhos=rbind(all_rhos,rhos)
+    }
+      
+  }
+}
+
+```
+
+
+```{r}
+all_rhos=t(all_rhos)
+colnames(all_rhos)=ROIs
+write.csv(all_rhos,'/Users/orlacamus/Desktop/projects/unethical_amnesia/analysisCode/7.PCA/all_rhos_SM2.csv')
+
+data=data.frame(all_rhos[2:10000,])
+colnames(data)=ROIs
+i=3
+f <- ggplot(data,aes(x=.data[[colnames(all_rhos)[i]]])) +
+#f <- ggplot(data.frame(all_rhos[2:10000,]),aes(x=lTPJ)) +
+     geom_histogram(stat = "bin",binwidth = 0.005,color='gray70',fill='white') +
+     #expand_limits(x=c(-60, 60))+
+     labs(x=NULL, y="Frequency")+
+     ggtitle(colnames(all_rhos)[i]) +
+     geom_vline(xintercept=all_rhos[1,i], col="red", linetype="dashed")+
+  
+    theme(axis.text.x = element_text(size=20,angle = 45, vjust=1, hjust=1),
+          axis.text.y = element_text(size=25),
+          axis.title=element_text(size=25),
+          plot.title = element_text(size=25,hjust = 0.5),
+          panel.background = element_rect(fill = "white"),
+          axis.line = element_line(colour = "black"))
+
+ggsave(file=paste0('/Users/orlacamus/Downloads/perm.svg'), plot=f, width=6, height=4)
+
+
+
+
+
+
+
+
+```
+
